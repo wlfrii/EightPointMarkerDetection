@@ -1,5 +1,6 @@
 #include "eight_point_marker.h"
 #include "eight_point_marker_util.h"
+#include <cstdlib>
 
 namespace epm{
 
@@ -15,10 +16,9 @@ EightPointMarker::EightPointMarker(const MarkerPointLocations &pts,
     _pt_area_min = area_min * _min_area_ratio;
     _pt_area_max = area_max * _max_area_ratio;
 
-    cv::RNG rng;
-    uchar r = rng.uniform(0, 256);
-    uchar g = rng.uniform(0, 256);
-    uchar b = rng.uniform(0, 256);
+    uchar r = std::rand() % 256;
+    uchar g = std::rand() % 256;
+    uchar b = std::rand() % 256;
     _color = cv::Scalar(r, g, b);
 }
 
