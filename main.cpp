@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
         cv::Mat frame;
         while(capture.read(frame)){
             ++count;
-            if(count < 80) continue;
+            //if(count < 80) continue;
             printf("%04ld\n", count);
 
             marker_locas = locator.locateMarkers(frame);

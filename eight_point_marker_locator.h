@@ -46,7 +46,7 @@ public:
 #endif
 
 private:
-    void findMarkers(const cv::Mat& image);
+    cv::Mat findMarkers(const cv::Mat& image, uint8_t thresh);
     cv::Mat trackMarkers(cv::Mat &image);
 
     std::vector<EightPointMarker> _markers;
