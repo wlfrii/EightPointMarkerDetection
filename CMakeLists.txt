@@ -1,14 +1,15 @@
 cmake_minimum_required(VERSION 3.0)
 
-project(EightPointMarkerDetection)
+project(EightPointMarkerLocator)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_BUILD_TYPE "Release")
+set(CMAKE_BUILD_TYPE "Debug")
 
 find_package(OpenCV REQUIRED)
 
 add_executable(${PROJECT_NAME}
     main.cpp
+    eight_point_marker.cpp
     eight_point_marker_locator.cpp
 )
 
