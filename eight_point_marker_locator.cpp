@@ -57,7 +57,7 @@ MarkerLocations EightPointMarkerLocator::locateMarkers(const cv::Mat& image)
 #endif
     gray = findMarkers(gray, MARKER_BG3);
 #if DEBUG_MARKER_LOCATOR
-        MTRACE("Find markers iter3\n");
+        MTRACE("Find markers iter4\n");
 #endif
     findMarkers(gray, MARKER_BG4);
 
@@ -73,8 +73,8 @@ MarkerLocations EightPointMarkerLocator::locateMarkers(const cv::Mat& image)
 void EightPointMarkerLocator::showResults(int wait_time)
 {
     for(size_t i = 0; i < _markers.size(); i++){
-        printf("\t#%ld marker:\n", i);
         auto& marker = _markers[i];
+        printf("\t#%ld marker: size=%ld\n", i, marker.pts().size());
         cv::Scalar color = marker.color();
         for(size_t j = 0; j < marker.pts().size(); j++){
             cv::Point2f pt = marker.pts()[j];
@@ -116,12 +116,14 @@ cv::Mat EightPointMarkerLocator::findMarkers(const cv::Mat& gray, uint8_t thresh
                                          cv::THRESH_OTSU | cv::THRESH_BINARY_INV);
             //roi_bw = ~roi_bw;
             //float thresh2 = cv::mean(roi_gray)[0];
-            roi_bw = roi_gray < MIN(thresh1, thresh);
+            float refined_thresh = MIN(thresh1, thresh);
+            roi_bw = roi_gray < refined_thresh;
 
 #if DEBUG_MARKER_LOCATOR
             MTRACE("Find a valid marker: pt.size:%ld, area.size:%ld\n",
                    pt_locations.size(), pt_areas.size());
-            printf("\tthresh: %f, mean_thresh:%f\n", thresh1, 1.0*thresh);
+//            printf("\tthresh: %f, mean_thresh:%f\n", thresh1, 1.0*thresh);
+            show("findMarker:roi_gray", roi_gray);
             show("findMarker:isMarker", bw);
             show("findMarker:isMarker_refine", roi_bw); cv::waitKey(0);
 #endif
@@ -138,6 +140,8 @@ cv::Mat EightPointMarkerLocator::findMarkers(const cv::Mat& gray, uint8_t thresh
 
             cv::Mat white = cv::Mat(rect.height, rect.width, gray.type(), cv::Scalar(255));
             white.copyTo(gray(rect));
+
+            //printf("\tfind done\n");
         }
     }
     return gray;
@@ -154,9 +158,9 @@ cv::Mat EightPointMarkerLocator::trackMarkers(cv::Mat& gray)
         cv::Rect rect = marker.rect();
         cv::Mat roi_gray = gray(rect);
         cv::Mat roi_bw;
-        cv::threshold(roi_gray, roi_bw, 100, 255,
+        cv::threshold(roi_gray, roi_bw, 0, 255,
                       cv::THRESH_OTSU | cv::THRESH_BINARY_INV);
-        //roi_bw = ~roi_bw;
+//        roi_bw = roi_gray < refined_thresh;
 #if DEBUG_MARKER_LOCATOR
         show("trackMarker:roi_bw", roi_bw);
 #endif
@@ -177,6 +181,7 @@ cv::Mat EightPointMarkerLocator::trackMarkers(cv::Mat& gray)
             show("trackMarker:isMarker", roi_bw);
             show("trackMarker:", gray); cv::waitKey(0);
 #endif
+            //printf("\ttrack done\n");
         }
         else{
             _markers = epm::rmElement(_markers, i);
@@ -359,6 +364,9 @@ bool isMarker(cv::Mat& bw, const cv::Mat& gray,
     std::vector<int> indices;
     for(uint16_t i = 1; i < num; i++){
         int area = stats.at<int>(i, 4);
+#if DEBUG_MARKER_LOCATOR
+        if(prev_marker) printf("\tarea: %d\n", area);
+#endif
         if(area > pt_area_min && area < pt_area_max){
             indices.push_back(i);
 #if DEBUG_MARKER_LOCATOR
@@ -385,7 +393,7 @@ bool isMarker(cv::Mat& bw, const cv::Mat& gray,
     if(!filterIndices(indices, stats, centroids, gray))
         return false;
 #if DEBUG_MARKER_LOCATOR
-    printf("\tPass contrast check: pt.size%ld\n", indices.size());
+    printf("\tPass contrast check: pt.size:%ld\n", indices.size());
 #endif
 
     // Filter the final centroid

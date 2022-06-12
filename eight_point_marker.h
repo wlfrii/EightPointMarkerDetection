@@ -22,7 +22,6 @@ class EightPointMarker
 {
 public:
     EightPointMarker(const MarkerPointLocations& pts, const MarkerPointAreas& pt_areas);
-    //EightPointMarker(EightPointMarker& marker);
 
     EightPointMarker operator=(EightPointMarker& marker);
 

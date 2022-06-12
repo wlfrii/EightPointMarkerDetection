@@ -7,8 +7,8 @@ namespace epm{
 EightPointMarker::EightPointMarker(const MarkerPointLocations &pts,
                                    const MarkerPointAreas &pt_areas)
     : _gap_ratio(1.8)
-    , _min_area_ratio(0.8)
-    , _max_area_ratio(1.2)
+    , _min_area_ratio(0.72)
+    , _max_area_ratio(1.25)
     , _pts(pts)
 {
     uint16_t area_min, area_max;
