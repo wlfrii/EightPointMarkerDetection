@@ -5,7 +5,7 @@
 #include "eight_point_marker.h"
 
 #define DEBUG_MARKER_LOCATOR 0
-#define ENABLE_SHOW_RESULTS 1
+#define ENABLE_SHOW_RESULTS 0
 
 namespace epm{
 
@@ -50,6 +50,9 @@ private:
     cv::Mat trackMarkers(cv::Mat &image);
 
     std::vector<EightPointMarker> _markers;
+
+    uint16_t _width;
+    uint16_t _height;
 
 #if ENABLE_SHOW_RESULTS
     cv::Mat _image;

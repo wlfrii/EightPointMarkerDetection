@@ -33,7 +33,7 @@ public:
     const MarkerPointLocations &pts() const;
     const cv::Scalar& color() const;
 
-    cv::Rect rect();
+    cv::Rect rect(uint16_t w_limit, uint16_t h_limit);
 
 private:
     const float _gap_ratio;

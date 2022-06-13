@@ -5,13 +5,13 @@
 
 namespace epm{
 
-constexpr uint8_t  MARKER_BG = 20;
-constexpr uint8_t  MARKER_BG2 = 30;
-constexpr uint8_t  MARKER_BG3 = 42;
+constexpr uint8_t  MARKER_BG = 25;
+constexpr uint8_t  MARKER_BG2 = 35;
+constexpr uint8_t  MARKER_BG3 = 45;
 constexpr uint8_t  MARKER_BG4 = 55;
 constexpr uint16_t MARKER_AREA_MIN = 36*36;
-constexpr uint16_t MARKER_PT_AREA_MIN = 50;
-constexpr uint16_t MARKER_PT_AREA_MAX = 900;
+constexpr uint16_t MARKER_PT_AREA_MIN = 36;
+constexpr uint16_t MARKER_PT_AREA_MAX = 700;
 
 bool isMarker(cv::Mat& bw, const cv::Mat& gray,
               MarkerPointLocations& pt_locations, MarkerPointAreas& pt_areas,
@@ -19,6 +19,8 @@ bool isMarker(cv::Mat& bw, const cv::Mat& gray,
 
 
 EightPointMarkerLocator::EightPointMarkerLocator()
+    : _width(1920)
+    , _height(1080)
 {
     _markers.clear();
 }
@@ -31,6 +33,11 @@ EightPointMarkerLocator::~EightPointMarkerLocator()
 
 MarkerLocations EightPointMarkerLocator::locateMarkers(const cv::Mat& image)
 {
+    if(image.empty()) return MarkerLocations();
+
+    _width = image.cols;
+    _height = image.rows;
+    printf("_width: %d, _height:%d\n", _width, _height);
 #if ENABLE_SHOW_RESULTS
     _image = image;
 #endif
@@ -38,7 +45,7 @@ MarkerLocations EightPointMarkerLocator::locateMarkers(const cv::Mat& image)
     cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
     cv::GaussianBlur(gray, gray, cv::Size(5, 5), 3);
 
-    if(_markers.size() > 1){
+    if(_markers.size() > 0){
 #if DEBUG_MARKER_LOCATOR
         MTRACE("Track markers first\n");
 #endif
@@ -79,7 +86,7 @@ void EightPointMarkerLocator::showResults(int wait_time)
         for(size_t j = 0; j < marker.pts().size(); j++){
             cv::Point2f pt = marker.pts()[j];
             cv::circle(_image, pt, 3, color, 3);
-            printf("\t\t Pt%ld:[%f,%f]\n", j, pt.x, pt.y);
+            //printf("\t\t Pt%ld:[%f,%f]\n", j, pt.x, pt.y);
         }
     }
     cv::imshow("Results", _image);
@@ -109,39 +116,41 @@ cv::Mat EightPointMarkerLocator::findMarkers(const cv::Mat& gray, uint8_t thresh
         if(isMarker(bw, gray, pt_locations, pt_areas, nullptr)){
             EightPointMarker marker(pt_locations, pt_areas);
             // Refine the marker
-            cv::Rect rect = marker.rect();
+            cv::Rect rect = marker.rect(_width, _height);
             cv::Mat roi_gray = gray(rect);
             cv::Mat roi_bw;
             float thresh1 = cv::threshold(roi_gray, roi_bw, 0, 255,
                                          cv::THRESH_OTSU | cv::THRESH_BINARY_INV);
-            //roi_bw = ~roi_bw;
-            //float thresh2 = cv::mean(roi_gray)[0];
-            float refined_thresh = MIN(thresh1, thresh);
+
+            float thresh2 = cv::mean(roi_gray)[0];
+            float refined_thresh = MIN(thresh1, 0.8*thresh2);
             roi_bw = roi_gray < refined_thresh;
 
 #if DEBUG_MARKER_LOCATOR
             MTRACE("Find a valid marker: pt.size:%ld, area.size:%ld\n",
                    pt_locations.size(), pt_areas.size());
-//            printf("\tthresh: %f, mean_thresh:%f\n", thresh1, 1.0*thresh);
+            printf("\tthresh: %f, mean_thresh:%f\n", thresh1, 0.8*thresh2);
             show("findMarker:roi_gray", roi_gray);
             show("findMarker:isMarker", bw);
             show("findMarker:isMarker_refine", roi_bw); cv::waitKey(0);
 #endif
             isMarker(roi_bw, roi_gray, pt_locations, pt_areas, nullptr);
+            if(pt_locations.size() == 8){
 #if DEBUG_MARKER_LOCATOR
-            MTRACE("Refine the marker done: pt.size:%ld, area.size:%ld\n",
-                   pt_locations.size(), pt_areas.size());
+                MTRACE("Refine the marker done: pt.size:%ld, area.size:%ld\n",
+                       pt_locations.size(), pt_areas.size());
 #endif
-            for(auto &pt:pt_locations){
-                pt = cv::Point2f(pt.x + rect.x, pt.y + rect.y);
+                for(auto &pt:pt_locations){
+                    pt = cv::Point2f(pt.x + rect.x, pt.y + rect.y);
+                }
+                marker.update(pt_locations, pt_areas);
+                _markers.push_back(marker);
+
+                cv::Mat white = cv::Mat(rect.height, rect.width, gray.type(), cv::Scalar(255));
+                white.copyTo(gray(rect));
+
+                //printf("\tfind done\n");
             }
-            marker.update(pt_locations, pt_areas);
-            _markers.push_back(marker);
-
-            cv::Mat white = cv::Mat(rect.height, rect.width, gray.type(), cv::Scalar(255));
-            white.copyTo(gray(rect));
-
-            //printf("\tfind done\n");
         }
     }
     return gray;
@@ -155,14 +164,18 @@ cv::Mat EightPointMarkerLocator::trackMarkers(cv::Mat& gray)
         if(i >= _markers.size()) break;
 
         auto& marker = _markers[i];
-        cv::Rect rect = marker.rect();
+        cv::Rect rect = marker.rect(_width, _height);
         cv::Mat roi_gray = gray(rect);
         cv::Mat roi_bw;
-        cv::threshold(roi_gray, roi_bw, 0, 255,
+        float thresh1 = cv::threshold(roi_gray, roi_bw, 0, 255,
                       cv::THRESH_OTSU | cv::THRESH_BINARY_INV);
-//        roi_bw = roi_gray < refined_thresh;
+        float thresh2 = cv::mean(roi_gray)[0];
+        float refined_thresh = MIN(thresh1, 0.8*thresh2);
+        roi_bw = roi_gray < refined_thresh;
+
 #if DEBUG_MARKER_LOCATOR
         show("trackMarker:roi_bw", roi_bw);
+        printf("\t Track thresh: %f, mean_thresh:%f\n", thresh1, 0.8*thresh2);
 #endif
         MarkerPointLocations pt_locations;
         MarkerPointAreas pt_areas;
@@ -270,7 +283,7 @@ bool filterIndices(std::vector<int>& indices, const cv::Mat& stats,
     size_t i = 0;
     while(i < indices.size()){
         float p = P_is_circle[i];
-        if (p < 1.5){
+        if (p < 1.3){
             P_is_circle = rmElement(P_is_circle, i);
             indices = rmElement(indices, i);
         }

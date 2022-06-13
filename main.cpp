@@ -26,7 +26,9 @@ int main(int argc, char* argv[])
         }
         marker_locas = locator.locateMarkers(image);
         printf("Detect done: \n\t%ld markers found.\n", marker_locas.size());
+#if ENABLE_SHOW_RESULTS
         locator.showResults(0);
+#endif
     }
     else if(fmt == "avi" || fmt == "mp4"){
         cv::VideoCapture capture(filepath);
@@ -37,14 +39,17 @@ int main(int argc, char* argv[])
         size_t count = 0;
         cv::Mat frame;
         while(capture.read(frame)){
+            //cv::cvtColor(frame, frame, cv::COLOR_BGR2RGB);
             ++count;
-            //if(count > 10) break;//continue;
+            //if(count < 670) continue;
             printf("%04ld\n", count);
 
             marker_locas = locator.locateMarkers(frame);
             printf("%04ld Detect done: \n\t%ld markers found.\n",
                    count, marker_locas.size());
+#if ENABLE_SHOW_RESULTS
             locator.showResults(10);
+#endif
         }
     }
     else{

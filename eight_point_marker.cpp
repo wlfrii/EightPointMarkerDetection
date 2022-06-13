@@ -8,7 +8,7 @@ EightPointMarker::EightPointMarker(const MarkerPointLocations &pts,
                                    const MarkerPointAreas &pt_areas)
     : _gap_ratio(1.8)
     , _min_area_ratio(0.72)
-    , _max_area_ratio(1.25)
+    , _max_area_ratio(1.28)
     , _pts(pts)
 {
     uint16_t area_min, area_max;
@@ -16,10 +16,10 @@ EightPointMarker::EightPointMarker(const MarkerPointLocations &pts,
     _pt_area_min = area_min * _min_area_ratio;
     _pt_area_max = area_max * _max_area_ratio;
 
-    uchar r = std::rand() % 256;
+    uchar r = std::rand() % 100 + 155;
     uchar g = std::rand() % 256;
-    uchar b = std::rand() % 256;
-    _color = cv::Scalar(r, g, b);
+    uchar b = std::rand() % 100;
+    _color = cv::Scalar(b, g, r);
 }
 
 
@@ -69,7 +69,7 @@ const cv::Scalar &EightPointMarker::color() const
 }
 
 
-cv::Rect EightPointMarker::rect()
+cv::Rect EightPointMarker::rect(uint16_t w_limit, uint16_t h_limit)
 {
     float min_x = _pts[0].x;
     float max_x = min_x;
@@ -90,10 +90,10 @@ cv::Rect EightPointMarker::rect()
     // Create new Rect with gap
     float x_gap = x_range * (_gap_ratio - 1) * 0.5;
     uint16_t xs = MAX((int)(min_x - x_gap + 0.5), 0);
-    uint16_t xe = MIN((int)(max_x + x_gap + 0.5), 1920-1);
+    uint16_t xe = MIN((int)(max_x + x_gap + 0.5), w_limit-1);
     float y_gap = y_range * (_gap_ratio - 1) * 0.5;
     uint16_t ys = MAX((int)(min_y - y_gap + 0.5), 0);
-    uint16_t ye = MIN((int)(max_y + y_gap + 0.5), 1080-1);
+    uint16_t ye = MIN((int)(max_y + y_gap + 0.5), h_limit-1);
 
     return cv::Rect(xs, ys, xe - xs, ye - ys);
 }
